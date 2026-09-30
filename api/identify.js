@@ -1,6 +1,7 @@
 // POST /api/identify  { image: base64 JPEG (front), back?: base64 JPEG }
-// → card fields read by a vision model (Claude) from the photo.
-import { key, send, readBody, claude, parseJSON } from './_lib.js';
+// → card fields read by a vision model from the photo.
+// Uses a Gemini key when provided (free tier), otherwise Anthropic Claude.
+import { key, send, readBody, claude, gemini, parseJSON } from './_lib.js';
 
 const SYSTEM = `You are an expert sports card identifier and grader's assistant.
 Given photos of a trading card (raw or in a grading slab), identify it precisely.
@@ -33,20 +34,32 @@ const SCHEMA = `{
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
-  const apiKey = key(req, 'x-anthropic-key', 'ANTHROPIC_API_KEY');
-  if (!apiKey) return send(res, 400, { error: 'No Anthropic API key. Add one in Settings → API Keys, or set ANTHROPIC_API_KEY on the server.' });
+  const geminiKey = key(req, 'x-gemini-key', 'GEMINI_API_KEY');
+  const anthropicKey = key(req, 'x-anthropic-key', 'ANTHROPIC_API_KEY');
+  if (!geminiKey && !anthropicKey)
+    return send(res, 400, { error: 'No API key. Add a free Gemini key in Settings → API Keys, or set GEMINI_API_KEY on the server.' });
 
   try {
     const { image, back } = await readBody(req);
     if (!image) return send(res, 400, { error: 'Missing image' });
 
-    const content = [
-      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
-      ...(back ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: back } }] : []),
-      { type: 'text', text: `Identify this card${back ? ' (front, then back)' : ''}. Return JSON matching:\n${SCHEMA}` },
-    ];
-    const text = await claude(apiKey, { system: SYSTEM, content, maxTokens: 800 });
-    const card = parseJSON(text);
+    let card;
+    if (geminiKey) {
+      const text = await gemini(geminiKey, {
+        system: SYSTEM,
+        text: `Identify this card${back ? ' (front, then back)' : ''}. Return ONLY JSON matching:\n${SCHEMA}`,
+        images: back ? [image, back] : [image],
+      });
+      card = parseJSON(text);
+    } else {
+      const content = [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
+        ...(back ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: back } }] : []),
+        { type: 'text', text: `Identify this card${back ? ' (front, then back)' : ''}. Return JSON matching:\n${SCHEMA}` },
+      ];
+      const text = await claude(anthropicKey, { system: SYSTEM, content, maxTokens: 800 });
+      card = parseJSON(text);
+    }
 
     // Normalize
     for (const k of ['rookie', 'auto', 'patch', 'refractor', 'graded']) card[k] = Boolean(card[k]);
