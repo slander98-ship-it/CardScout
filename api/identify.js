@@ -2,9 +2,11 @@
 // → card fields read by a vision model from the photo, PLUS a market value
 // estimate with sold comps — all in ONE model call, so a scan burns a single
 // free-tier request instead of separate identify + comps calls.
-// Uses a Gemini key (free tier) with Google Search grounding; falls back to
-// Anthropic Claude vision (identification only, no market value).
-import { key, send, readBody, claude, gemini, parseJSON } from './_lib.js';
+// Gemini-only: uses a free Gemini key with Google Search grounding.
+// The key comes from the user's Settings (x-gemini-key header) or from the
+// server's GEMINI_API_KEY env var, so a shared link can work with no key
+// visible anywhere in the browser.
+import { key, send, readBody, gemini, parseJSON } from './_lib.js';
 
 const SYSTEM = `You are an expert sports card identifier and market analyst.
 Given photos of a trading card (raw or in a grading slab), identify it precisely.
@@ -49,54 +51,39 @@ const r2 = (n) => Math.round(Number(n) * 100) / 100;
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
   const geminiKey = key(req, 'x-gemini-key', 'GEMINI_API_KEY');
-  const anthropicKey = key(req, 'x-anthropic-key', 'ANTHROPIC_API_KEY');
-  if (!geminiKey && !anthropicKey)
+  if (!geminiKey)
     return send(res, 400, { error: 'No API key. Add a free Gemini key in Settings → API Keys, or set GEMINI_API_KEY on the server.' });
 
   try {
     const { image, back } = await readBody(req);
     if (!image) return send(res, 400, { error: 'Missing image' });
 
-    let card;
+    const r = await gemini(geminiKey, {
+      system: SYSTEM,
+      text: `Identify this card${back ? ' (front, then back)' : ''} and estimate its market value from recent sold prices. Return ONLY JSON matching:\n${SCHEMA}`,
+      images: back ? [image, back] : [image],
+      maxTokens: 1500,
+      grounding: true,
+      sources: true,
+    });
+    const out = parseJSON(r.text);
+    const sources = r.sources || [];
+    const { estimate, estimateLow, estimateHigh, marketConfidence, marketNotes, ...fields } = out;
+    const card = fields;
+    const soldComps = Array.isArray(out.soldComps) ? out.soldComps.filter((c) => c && Number(c.price) > 0).slice(0, 8) : [];
     let value = null;
-    let soldComps = [];
-    let sources = [];
-    const warnings = [];
-
-    if (geminiKey) {
-      const r = await gemini(geminiKey, {
-        system: SYSTEM,
-        text: `Identify this card${back ? ' (front, then back)' : ''} and estimate its market value from recent sold prices. Return ONLY JSON matching:\n${SCHEMA}`,
-        images: back ? [image, back] : [image],
-        maxTokens: 1500,
-        grounding: true,
-        sources: true,
-      });
-      const out = parseJSON(r.text);
-      sources = r.sources || [];
-      const { estimate, estimateLow, estimateHigh, marketConfidence, marketNotes, ...fields } = out;
-      card = fields;
-      soldComps = Array.isArray(out.soldComps) ? out.soldComps.filter((c) => c && Number(c.price) > 0).slice(0, 8) : [];
-      if (estimate && Number(estimate)) {
-        value = {
-          avg: r2(estimate),
-          low: r2(estimateLow || estimate * 0.8),
-          high: r2(estimateHigh || estimate * 1.25),
-          basis: `AI estimate from ${soldComps.length || 'web'} sold comp${soldComps.length === 1 ? '' : 's'} · ${marketConfidence || 'medium'} confidence — verify before paying up`,
-        };
-      }
-      if (marketNotes) warnings.push(marketNotes);
-      if (!value) warnings.push('Could not find reliable sold comps — check the sold links below or enter a value manually.');
-      else if ((marketConfidence || 'medium') === 'low') warnings.push('Low confidence — thin or mismatched comps. Check eBay Sold / 130point before paying up.');
-    } else {
-      const content = [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: image } },
-        ...(back ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: back } }] : []),
-        { type: 'text', text: `Identify this card${back ? ' (front, then back)' : ''}. Return JSON matching:\n${SCHEMA}` },
-      ];
-      const text = await claude(anthropicKey, { system: SYSTEM, content, maxTokens: 800 });
-      card = parseJSON(text);
+    if (estimate && Number(estimate)) {
+      value = {
+        avg: r2(estimate),
+        low: r2(estimateLow || estimate * 0.8),
+        high: r2(estimateHigh || estimate * 1.25),
+        basis: `AI estimate from ${soldComps.length || 'web'} sold comp${soldComps.length === 1 ? '' : 's'} · ${marketConfidence || 'medium'} confidence — verify before paying up`,
+      };
     }
+    const warnings = [];
+    if (marketNotes) warnings.push(marketNotes);
+    if (!value) warnings.push('Could not find reliable sold comps — check the sold links below or enter a value manually.');
+    else if ((marketConfidence || 'medium') === 'low') warnings.push('Low confidence — thin or mismatched comps. Check eBay Sold / 130point before paying up.');
 
     // Normalize
     for (const k of ['rookie', 'auto', 'patch', 'refractor', 'graded']) card[k] = Boolean(card[k]);
