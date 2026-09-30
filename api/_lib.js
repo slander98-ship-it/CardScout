@@ -47,11 +47,12 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
     },
     ...(grounding ? { tools: [{ google_search: {} }] } : {}),
   });
-  // Google's free tier buckles under load — ride out transient 429/503
-  // "high demand" spikes with backoff instead of failing the scan.
+  // Google's free tier buckles under load — ride out transient 5xx "high
+  // demand" spikes with backoff. For 429 quota hits, honor Google's own
+  // "retry in Xs" hint exactly once, then stop: blind retries just burn the
+  // quota faster. The caller surfaces a friendly "wait a minute" message.
   let lastErr = new Error('Gemini request failed');
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt) await sleep(4000 * attempt); // 4s, then 8s
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
@@ -75,10 +76,21 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
       return { text: out, sources: srcs };
     }
     lastErr = new Error(data?.error?.message || `Gemini API error ${r.status}`);
-    // Retry anything that smells transient: rate limits, any 5xx, or Google's
+    if (attempt === 2) break;
+    if (r.status === 429) {
+      const m = /retry in ([\d.]+)\s*s/i.exec(lastErr.message);
+      if (attempt === 0 && m) {
+        await sleep(Math.min(parseFloat(m[1]) * 1000 + 1500, 20000));
+        continue;
+      }
+      lastErr = new Error("Google's free tier is rate-limited right now — it resets in under a minute. Give it a moment, then try again.");
+      break;
+    }
+    // Retry anything else that smells transient: any 5xx, or Google's
     // "high demand / overloaded / try again later" messages regardless of status.
-    const retryable = r.status === 429 || r.status >= 500 || /high demand|overloaded|try again later|temporar/i.test(lastErr.message);
+    const retryable = r.status >= 500 || /high demand|overloaded|try again later|temporar/i.test(lastErr.message);
     if (!retryable) break;
+    await sleep(4000 * (attempt + 1)); // 4s, then 8s
   }
   throw lastErr;
 }
