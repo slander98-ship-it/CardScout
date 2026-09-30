@@ -25,7 +25,6 @@ export async function readBody(req) {
   return JSON.parse(Buffer.concat(chunks).toString() || '{}');
 }
 
-export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 /** Minimal Gemini generateContent call (no SDK dependency). Free tier eligible. */
@@ -93,27 +92,6 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
     await sleep(4000 * (attempt + 1)); // 4s, then 8s
   }
   throw lastErr;
-}
-
-/** Minimal Anthropic Messages API call (no SDK dependency). */
-export async function claude(apiKey, { system, content, maxTokens = 1500 }) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content }],
-    }),
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || `Anthropic API error ${r.status}`);
-  return data.content?.map((b) => b.text || '').join('') || '';
 }
 
 /** Pull the first JSON object/array out of a model reply. */
