@@ -104,7 +104,10 @@ function KeysSection() {
   return (
     <Card title="API keys" sub="Optional if your host set server keys. Keys you enter stay on this device and are sent only to this app's own server.">
       <div className="space-y-4">
-        <Field label="Anthropic API key" hint="Card recognition and AI listings · console.anthropic.com">
+        <Field label="Gemini API key" hint="Free card recognition · get one at aistudio.google.com/apikey">
+          <SecretInput value={settings.geminiKey} onChange={(v) => setSettings({ geminiKey: v })} placeholder="AIza…" />
+        </Field>
+        <Field label="Anthropic API key" hint="Card recognition and AI listings (paid) · console.anthropic.com">
           <SecretInput value={settings.anthropicKey} onChange={(v) => setSettings({ anthropicKey: v })} placeholder="sk-ant-…" />
         </Field>
         <Field label="SportsCardsPro API token" hint="Sold-price guide by grade · paid subscription at sportscardspro.com">
