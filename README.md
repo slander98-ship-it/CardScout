@@ -23,7 +23,7 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
 
 | Need | Source | Notes |
 |---|---|---|
-| Card recognition / OCR | **Gemini vision** (`gemini-2.5-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
+| Card recognition / OCR | **Gemini vision** (`gemini-3.8-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
 | Market value by grade | **eBay Browse API** (category 261328) | *Active* listings, bucketed by grade from listing titles. Anchor = median of the bucket matching the card's grade, minus 12% ask-to-sold. Free developer account — no paid price guide. |
 | Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | One-tap links | No free API exposes eBay sold prices (eBay shut down the free Finding API in Feb 2025; Marketplace Insights is restricted to approved partners) — so they open pre-filled searches rather than being scraped. The **Market value override** field lets you type in a better comp you find there. |
 | Listing copy | **Gemini** (free; Anthropic only as fallback) | Uses only the card's facts; built-in templates work with no key/offline. |
