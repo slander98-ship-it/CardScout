@@ -26,6 +26,25 @@ export async function readBody(req) {
 }
 
 export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
+/** Minimal Gemini generateContent call (no SDK dependency). Free tier eligible. */
+export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) {
+  const parts = [];
+  if (system || text) parts.push({ text: [system, text].filter(Boolean).join('\n\n') });
+  for (const img of images || []) parts.push({ inline_data: { mime_type: 'image/jpeg', data: img } });
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
+    method: 'POST',
+    headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: maxTokens, temperature: 0.2 },
+    }),
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data?.error?.message || `Gemini API error ${r.status}`);
+  return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+}
 
 /** Minimal Anthropic Messages API call (no SDK dependency). */
 export async function claude(apiKey, { system, content, maxTokens = 1500 }) {
