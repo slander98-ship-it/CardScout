@@ -101,20 +101,29 @@ function SecretInput({ value, onChange, placeholder }) {
 
 function KeysSection() {
   const { settings, setSettings } = useCollection();
+  const toast = useToast();
+  const timer = useRef(null);
+  // Keys save automatically to this device on every keystroke — the toast
+  // exists so it's obvious; there's no separate save button to hunt for.
+  const savedNote = () => {
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => toast('Saved on this device ✓', 'success'), 1200);
+  };
+  const set = (k) => (v) => { setSettings({ [k]: v }); savedNote(); };
   return (
-    <Card title="API keys" sub="Optional if your host set server keys. Keys you enter stay on this device and are sent only to this app's own server.">
+    <Card title="API keys" sub="Saved automatically on this device — no save button needed. Sent only to this app's own server.">
       <div className="space-y-4">
         <Field label="Gemini API key" hint="Free card recognition + AI listing copy · aistudio.google.com/apikey">
-          <SecretInput value={settings.geminiKey} onChange={(v) => setSettings({ geminiKey: v })} placeholder="AIza…" />
+          <SecretInput value={settings.geminiKey} onChange={set('geminiKey')} placeholder="AIza…" />
         </Field>
         <Field label="eBay App ID (Client ID)" hint="Market comps · free at developer.ebay.com — create a production keyset once, paste the two values here">
-          <SecretInput value={settings.ebayClientId} onChange={(v) => setSettings({ ebayClientId: v })} placeholder="YourApp-PRD-…" />
+          <SecretInput value={settings.ebayClientId} onChange={set('ebayClientId')} placeholder="YourApp-PRD-…" />
         </Field>
         <Field label="eBay Cert ID (Client Secret)" hint="Pairs with the App ID above">
-          <SecretInput value={settings.ebayClientSecret} onChange={(v) => setSettings({ ebayClientSecret: v })} placeholder="PRD-…" />
+          <SecretInput value={settings.ebayClientSecret} onChange={set('ebayClientSecret')} placeholder="PRD-…" />
         </Field>
         <Field label="Anthropic API key" hint="Optional backup for listings — Gemini above does it free · console.anthropic.com">
-          <SecretInput value={settings.anthropicKey} onChange={(v) => setSettings({ anthropicKey: v })} placeholder="sk-ant-…" />
+          <SecretInput value={settings.anthropicKey} onChange={set('anthropicKey')} placeholder="sk-ant-…" />
         </Field>
       </div>
     </Card>
