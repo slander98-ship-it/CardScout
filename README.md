@@ -23,7 +23,7 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
 
 | Need | Source | Notes |
 |---|---|---|
-| Card recognition / OCR | **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
+| Card recognition / OCR | **Gemini vision** (`gemini-2.5-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
 | Market value by grade | **SportsCardsPro API** | Price guide built from completed sales, broken out as Ungraded, 7, 8, 9, 9.5, PSA/BGS/SGC/CGC 10. This is the anchor value. Paid subscription. |
 | Live comps | **eBay Browse API** (category 261328) | *Active* listings only. Used for the low/high range and the comps list. Free developer account. |
 | Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | One-tap links | eBay's sold-data API (Marketplace Insights) is restricted to approved partners, and 130point/Goldin have no public API — so they open pre-filled searches rather than being scraped. The **Market value override** field lets you type in a better comp you find there. |
