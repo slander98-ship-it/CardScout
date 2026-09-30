@@ -111,19 +111,10 @@ function KeysSection() {
   };
   const set = (k) => (v) => { setSettings({ [k]: v }); savedNote(); };
   return (
-    <Card title="API keys" sub="Saved automatically on this device — no save button needed. Sent only to this app's own server.">
+    <Card title="API key" sub="Just one key — saved automatically on this device, no save button needed. Sent only to this app's own server.">
       <div className="space-y-4">
-        <Field label="Gemini API key" hint="Free card recognition + AI listing copy · aistudio.google.com/apikey">
+        <Field label="Gemini API key" hint="Free: card recognition, market values + listing copy · aistudio.google.com/apikey">
           <SecretInput value={settings.geminiKey} onChange={set('geminiKey')} placeholder="AIza…" />
-        </Field>
-        <Field label="eBay App ID (Client ID)" hint="Market comps · free at developer.ebay.com — create a production keyset once, paste the two values here">
-          <SecretInput value={settings.ebayClientId} onChange={set('ebayClientId')} placeholder="YourApp-PRD-…" />
-        </Field>
-        <Field label="eBay Cert ID (Client Secret)" hint="Pairs with the App ID above">
-          <SecretInput value={settings.ebayClientSecret} onChange={set('ebayClientSecret')} placeholder="PRD-…" />
-        </Field>
-        <Field label="Anthropic API key" hint="Optional backup for listings — Gemini above does it free · console.anthropic.com">
-          <SecretInput value={settings.anthropicKey} onChange={set('anthropicKey')} placeholder="sk-ant-…" />
         </Field>
       </div>
     </Card>
