@@ -7,9 +7,6 @@ function keyHeaders() {
   const s = loadSettings();
   const h = { 'Content-Type': 'application/json' };
   if (s.geminiKey) h['x-gemini-key'] = s.geminiKey;
-  if (s.anthropicKey) h['x-anthropic-key'] = s.anthropicKey;
-  if (s.ebayClientId) h['x-ebay-client-id'] = s.ebayClientId;
-  if (s.ebayClientSecret) h['x-ebay-client-secret'] = s.ebayClientSecret;
   return h;
 }
 
