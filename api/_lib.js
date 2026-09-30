@@ -29,21 +29,34 @@ export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 /** Minimal Gemini generateContent call (no SDK dependency). Free tier eligible. */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) {
   const parts = [];
   if (system || text) parts.push({ text: [system, text].filter(Boolean).join('\n\n') });
   for (const img of images || []) parts.push({ inline_data: { mime_type: 'image/jpeg', data: img } });
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-    method: 'POST',
-    headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: maxTokens, temperature: 0.2 },
-    }),
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+  const body = JSON.stringify({
+    contents: [{ parts }],
+    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: maxTokens, temperature: 0.2 },
   });
-  const data = await r.json();
-  if (!r.ok) throw new Error(data?.error?.message || `Gemini API error ${r.status}`);
-  return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+  // Google's free tier buckles under load — ride out transient 429/503
+  // "high demand" spikes with backoff instead of failing the scan.
+  let lastErr = new Error('Gemini request failed');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await sleep(4000 * attempt); // 4s, then 8s
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': apiKey, 'content-type': 'application/json' },
+      body,
+    });
+    const data = await r.json().catch(() => null);
+    if (r.ok) return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+    lastErr = new Error(data?.error?.message || `Gemini API error ${r.status}`);
+    const retryable = r.status === 429 || r.status === 503 || /high demand|overloaded|try again later/i.test(lastErr.message);
+    if (!retryable) break;
+  }
+  throw lastErr;
 }
 
 /** Minimal Anthropic Messages API call (no SDK dependency). */
