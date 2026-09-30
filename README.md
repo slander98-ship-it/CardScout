@@ -14,7 +14,7 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
  │ React 18 + Tailwind 4 (Vite)  │ ─────────────▶ │ /api/identify        │ ──▶ Gemini vision (free tier)
  │ Evaluator · Collection ·      │                │ /api/comps           │ ──▶ Gemini + Search grounding
  │ Export & Sell · Settings      │                │                      │     (sold comps)
- │ IndexedDB  (cards + photos)   │                │ /api/listing         │ ──▶ Gemini (free; Anthropic fallback)
+ │ IndexedDB  (cards + photos)   │                │ /api/listing         │ ──▶ Gemini (free tier)
  │ Service worker (offline shell)│                └─────────────────────┘
  └───────────────────────────────┘
 ```
@@ -23,10 +23,10 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
 
 | Need | Source | Notes |
 |---|---|---|
-| Card recognition / OCR | **Gemini vision** (`gemini-3.8-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
+| Card recognition / OCR | **Gemini vision** (`gemini-3.8-flash`, free tier, override with `GEMINI_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
 | Market value | **Gemini + Google Search grounding** (free tier) | When a scan IDs a card, the app searches the web for recent *sold* prices (eBay sold, Heritage, Goldin, Fanatics Collect, 130point, PSA auction data) and approximates a value with linked sources. Labeled as an AI estimate — verify before paying up. |
 | Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | Shown under the estimate + one-tap links | Every comp the AI cites links to its source. The **Market value override** field lets you type in a better comp you find yourself. |
-| Listing copy | **Gemini** (free; Anthropic only as fallback) | Uses only the card's facts; built-in templates work with no key/offline. |
+| Listing copy | **Gemini** (free tier) | Uses only the card's facts; built-in templates work with no key/offline. |
 
 **Valuation logic** (`api/comps.js`): if the guide has a price for the card's exact grade, that's Market; Low/High blend ±15% with the trimmed active-ask range. With no guide match, Market = median active ask −12% (asks run above sold) and the app warns you to confirm sold comps. Outliers are removed with the IQR rule.
 
