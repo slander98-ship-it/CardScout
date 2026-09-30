@@ -4,9 +4,7 @@ const KEY = 'cardscout:settings';
 
 export const DEFAULT_SETTINGS = {
   // Bring-your-own keys (optional if the host set server env vars)
-  anthropicKey: '',
-  ebayClientId: '',
-  ebayClientSecret: '',
+  geminiKey: '', // the only key the app needs: recognition, market values, listings
 
   // Selling-fee model used by the deal calculator (eBay trading-card defaults)
   feePercent: 13.25, // final value fee %
