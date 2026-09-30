@@ -104,20 +104,17 @@ function KeysSection() {
   return (
     <Card title="API keys" sub="Optional if your host set server keys. Keys you enter stay on this device and are sent only to this app's own server.">
       <div className="space-y-4">
-        <Field label="Gemini API key" hint="Free card recognition · get one at aistudio.google.com/apikey">
+        <Field label="Gemini API key" hint="Free card recognition + AI listing copy · aistudio.google.com/apikey">
           <SecretInput value={settings.geminiKey} onChange={(v) => setSettings({ geminiKey: v })} placeholder="AIza…" />
         </Field>
-        <Field label="Anthropic API key" hint="Card recognition and AI listings (paid) · console.anthropic.com">
-          <SecretInput value={settings.anthropicKey} onChange={(v) => setSettings({ anthropicKey: v })} placeholder="sk-ant-…" />
-        </Field>
-        <Field label="SportsCardsPro API token" hint="Sold-price guide by grade · paid subscription at sportscardspro.com">
-          <SecretInput value={settings.sportsCardsProToken} onChange={(v) => setSettings({ sportsCardsProToken: v })} placeholder="40-character token" />
-        </Field>
-        <Field label="eBay App ID (Client ID)" hint="Active listings · free at developer.ebay.com (production keyset)">
+        <Field label="eBay App ID (Client ID)" hint="Market comps · free at developer.ebay.com — create a production keyset once, paste the two values here">
           <SecretInput value={settings.ebayClientId} onChange={(v) => setSettings({ ebayClientId: v })} placeholder="YourApp-PRD-…" />
         </Field>
-        <Field label="eBay Cert ID (Client Secret)">
+        <Field label="eBay Cert ID (Client Secret)" hint="Pairs with the App ID above">
           <SecretInput value={settings.ebayClientSecret} onChange={(v) => setSettings({ ebayClientSecret: v })} placeholder="PRD-…" />
+        </Field>
+        <Field label="Anthropic API key" hint="Optional backup for listings — Gemini above does it free · console.anthropic.com">
+          <SecretInput value={settings.anthropicKey} onChange={(v) => setSettings({ anthropicKey: v })} placeholder="sk-ant-…" />
         </Field>
       </div>
     </Card>
