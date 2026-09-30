@@ -53,7 +53,9 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) 
     const data = await r.json().catch(() => null);
     if (r.ok) return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
     lastErr = new Error(data?.error?.message || `Gemini API error ${r.status}`);
-    const retryable = r.status === 429 || r.status === 503 || /high demand|overloaded|try again later/i.test(lastErr.message);
+    // Retry anything that smells transient: rate limits, any 5xx, or Google's
+    // "high demand / overloaded / try again later" messages regardless of status.
+    const retryable = r.status === 429 || r.status >= 500 || /high demand|overloaded|try again later|temporar/i.test(lastErr.message);
     if (!retryable) break;
   }
   throw lastErr;
