@@ -261,7 +261,7 @@ export default function Evaluator({ goTo }) {
               </div>
             )}
             {comps?.value && <ValueRange value={comps.value} />}
-            {comps?.guide?.matched && <div className="text-xs text-dim">Guide match: {comps.guide.matched}</div>}
+            {comps?.guide?.matched && <div className="text-xs text-dim">Comps: {comps.guide.matched}</div>}
 
             <Field label="Market value override" hint="Saw a better comp on 130point or eBay Sold? Enter it here — it replaces the estimate.">
               <Input value={manualValue} onChange={(e) => setManualValue(e.target.value.replace(/[^0-9.]/g, ''))} inputMode="decimal" placeholder={comps?.value?.avg ? money(comps.value.avg) : 'e.g. 120'} />
