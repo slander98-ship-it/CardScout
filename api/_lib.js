@@ -31,14 +31,21 @@ export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 /** Minimal Gemini generateContent call (no SDK dependency). Free tier eligible. */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) {
+export async function gemini(apiKey, { system, text, images, maxTokens = 800, grounding = false, sources = false }) {
   const parts = [];
   if (system || text) parts.push({ text: [system, text].filter(Boolean).join('\n\n') });
   for (const img of images || []) parts.push({ inline_data: { mime_type: 'image/jpeg', data: img } });
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
   const body = JSON.stringify({
     contents: [{ parts }],
-    generationConfig: { responseMimeType: 'application/json', maxOutputTokens: maxTokens, temperature: 0.2 },
+    generationConfig: {
+      // JSON mode is skipped for grounded calls; the prompt asks for JSON and
+      // parseJSON() extracts it — more reliable alongside the search tool.
+      ...(grounding ? {} : { responseMimeType: 'application/json' }),
+      maxOutputTokens: maxTokens,
+      temperature: 0.2,
+    },
+    ...(grounding ? { tools: [{ google_search: {} }] } : {}),
   });
   // Google's free tier buckles under load — ride out transient 429/503
   // "high demand" spikes with backoff instead of failing the scan.
@@ -51,7 +58,22 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) 
       body,
     });
     const data = await r.json().catch(() => null);
-    if (r.ok) return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+    if (r.ok) {
+      const out = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
+      if (!sources) return out;
+      const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const seen = new Set();
+      const srcs = [];
+      for (const c of chunks) {
+        const w = c.web;
+        if (!w?.uri || seen.has(w.uri)) continue;
+        seen.add(w.uri);
+        let host = w.title || '';
+        try { host = new URL(w.uri).hostname.replace(/^www\./, ''); } catch { /* keep title */ }
+        srcs.push({ name: w.title || host, url: w.uri, note: host });
+      }
+      return { text: out, sources: srcs };
+    }
     lastErr = new Error(data?.error?.message || `Gemini API error ${r.status}`);
     // Retry anything that smells transient: rate limits, any 5xx, or Google's
     // "high demand / overloaded / try again later" messages regardless of status.
