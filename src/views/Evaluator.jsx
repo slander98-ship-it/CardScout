@@ -132,7 +132,7 @@ export default function Evaluator({ goTo }) {
           </div>
           <div className="text-center">
             <div className="text-xl font-semibold">Tap to scan a card</div>
-            <div className="mt-1 text-sm text-dim">Raw or slabbed · fill the frame, avoid glare</div>
+            <div className="mt-1 text-sm text-dim">Front photo is all it needs · raw or slabbed · fill the frame, avoid glare</div>
           </div>
         </button>
 
@@ -177,7 +177,12 @@ export default function Evaluator({ goTo }) {
 
       {idInfo?.error && (
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
-          Couldn't auto-identify: {idInfo.error} Fill in the details below, then check comps.
+          Couldn't auto-identify: {idInfo.error}
+          {/api key/i.test(idInfo.error) ? (
+            <button onClick={() => goTo('settings')} className="ml-1 font-semibold text-brand underline">Add your API key in Settings →</button>
+          ) : (
+            <span> Fill in the details below, then check comps.</span>
+          )}
         </div>
       )}
 
