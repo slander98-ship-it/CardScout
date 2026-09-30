@@ -26,7 +26,7 @@ export async function readBody(req) {
 }
 
 export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
 /** Minimal Gemini generateContent call (no SDK dependency). Free tier eligible. */
 export async function gemini(apiKey, { system, text, images, maxTokens = 800 }) {
