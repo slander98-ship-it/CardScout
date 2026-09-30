@@ -1,7 +1,8 @@
 // POST /api/listing  { cards: [...], platform: 'ebay'|'whatnot'|'facebook'|'generic' }
 // → { listings: { [id]: { title, description } } }  AI-written sales copy.
-// Uses the free Gemini key first; Anthropic only as an optional fallback.
-import { key, send, readBody, gemini, claude, parseJSON } from './_lib.js';
+// Gemini-only: uses the free Gemini key (per-user Settings key, or the
+// server's GEMINI_API_KEY).
+import { key, send, readBody, gemini, parseJSON } from './_lib.js';
 
 const STYLE = {
   ebay: 'eBay: title max 80 chars, keyword-dense in buyer search order (Year Set Player Parallel #Num RC Auto /Serial Grader Grade). Description plain text, factual, 3 short paragraphs.',
@@ -25,8 +26,7 @@ const pick = (c) => {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'POST only' });
   const geminiKey = key(req, 'x-gemini-key', 'GEMINI_API_KEY');
-  const anthropicKey = key(req, 'x-anthropic-key', 'ANTHROPIC_API_KEY');
-  if (!geminiKey && !anthropicKey) {
+  if (!geminiKey) {
     return send(res, 400, { error: 'Add your free Gemini API key in Settings → API keys to generate AI listings.' });
   }
 
@@ -36,13 +36,7 @@ export default async function handler(req, res) {
     if (cards.length > 25) return send(res, 400, { error: 'Max 25 cards per request' });
 
     const prompt = `Platform style — ${STYLE[platform] || STYLE.generic}\n\nCards:\n${JSON.stringify(cards.map(pick))}`;
-    const text = geminiKey
-      ? await gemini(geminiKey, { system: SYSTEM, text: prompt, maxTokens: 800 + cards.length * 400 })
-      : await claude(anthropicKey, {
-          system: SYSTEM,
-          maxTokens: 400 + cards.length * 350,
-          content: [{ type: 'text', text: prompt }],
-        });
+    const text = await gemini(geminiKey, { system: SYSTEM, text: prompt, maxTokens: 800 + cards.length * 400 });
     const out = parseJSON(text);
     const listings = {};
     for (const l of out.listings || []) listings[l.id] = { title: l.title, description: l.description };
