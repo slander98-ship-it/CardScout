@@ -7,7 +7,7 @@ import { cardHeadline, gradeLabel, attrTags } from '../lib/cardText.js';
 import { money } from '../lib/pricing.js';
 import { usePhotoPicker } from '../components/PhotoPicker.jsx';
 import CardForm from '../components/CardForm.jsx';
-import { ValueRange, DealMeter, GradeLadder, ActiveListings, ResearchLinks, ladderKey } from '../components/Comps.jsx';
+import { ValueRange, DealMeter, GradeLadder, SoldComps, ResearchLinks, ladderKey } from '../components/Comps.jsx';
 import { Button, Field, Input, Sheet, Spinner, useToast, useOnline } from '../components/ui.jsx';
 import { IconCamera, IconUpload, IconEdit, IconRefresh, IconWifiOff, IconCheck } from '../components/icons.jsx';
 
@@ -276,9 +276,9 @@ export default function Evaluator({ goTo }) {
             </div>
           )}
 
-          {comps?.active && (
+          {(comps?.soldComps?.length > 0 || comps?.sources?.length > 0) && (
             <div className="rounded-2xl border border-line bg-panel p-4">
-              <ActiveListings active={comps.active} />
+              <SoldComps soldComps={comps.soldComps} sources={comps.sources} />
             </div>
           )}
 
