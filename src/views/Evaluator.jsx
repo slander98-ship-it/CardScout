@@ -53,13 +53,23 @@ export default function Evaluator({ goTo }) {
     setIdInfo(null);
     setPhase('identifying');
     try {
-      const { card: found } = await identifyCard(base64Of(p.ai));
+      // Identify now returns the card AND its market value + sold comps in one
+      // call — no second request needed, which keeps free-tier quota burn to
+      // a single request per scan.
+      const res = await identifyCard(base64Of(p.ai));
+      const { card: found, value, soldComps, sources, warnings } = res;
       const { confidence, notes, ...fields } = found;
       const merged = { ...draft, ...fields };
       setCard(merged);
       setIdInfo({ confidence, notes });
       setPhase('review');
-      runComps(merged);
+      if (value || (soldComps && soldComps.length) || (sources && sources.length)) {
+        setComps({ value, soldComps: soldComps || [], sources: sources || [], warnings: warnings || [], fetchedAt: res.fetchedAt });
+        setCompsState('idle');
+        if (warnings && warnings.length) toast(warnings[0]);
+      } else {
+        runComps(merged);
+      }
     } catch (e) {
       setIdInfo({ error: e.message });
       setEditing(true);
@@ -160,7 +170,7 @@ export default function Evaluator({ goTo }) {
         <div className="flex items-center gap-3 text-lg">
           <Spinner /> Reading the card…
         </div>
-        <p className="max-w-xs text-center text-sm text-dim">Player, set, year, parallel, grade and cert are pulled from the photo.</p>
+        <p className="max-w-xs text-center text-sm text-dim">Player, set, year, grade and cert are pulled from the photo — market value comes along in the same lookup.</p>
       </div>
     );
   }
