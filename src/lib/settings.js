@@ -5,7 +5,6 @@ const KEY = 'cardscout:settings';
 export const DEFAULT_SETTINGS = {
   // Bring-your-own keys (optional if the host set server env vars)
   anthropicKey: '',
-  sportsCardsProToken: '',
   ebayClientId: '',
   ebayClientSecret: '',
 
