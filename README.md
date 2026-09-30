@@ -11,23 +11,22 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
 ```
  Phone / desktop browser (PWA)                    Vercel serverless (/api)             Upstream
  ┌───────────────────────────────┐   HTTPS JSON   ┌─────────────────────┐
- │ React 18 + Tailwind 4 (Vite)  │ ─────────────▶ │ /api/identify        │ ──▶ Anthropic Claude (vision)
- │ Evaluator · Collection ·      │                │ /api/comps           │ ──▶ SportsCardsPro API (sold guide)
- │ Export & Sell · Settings      │                │                      │ ──▶ eBay Browse API (active listings)
- │ IndexedDB  (cards + photos)   │                │ /api/listing         │ ──▶ Anthropic Claude (copy)
+ │ React 18 + Tailwind 4 (Vite)  │ ─────────────▶ │ /api/identify        │ ──▶ Gemini vision (free tier)
+ │ Evaluator · Collection ·      │                │ /api/comps           │ ──▶ eBay Browse API (active listings,
+ │ Export & Sell · Settings      │                │                      │     bucketed by grade)
+ │ IndexedDB  (cards + photos)   │                │ /api/listing         │ ──▶ Gemini (free; Anthropic fallback)
  │ Service worker (offline shell)│                └─────────────────────┘
  └───────────────────────────────┘
 ```
 
-**Why these APIs**
+**Why these APIs — everything is free**
 
 | Need | Source | Notes |
 |---|---|---|
 | Card recognition / OCR | **Gemini vision** (`gemini-2.5-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
-| Market value by grade | **SportsCardsPro API** | Price guide built from completed sales, broken out as Ungraded, 7, 8, 9, 9.5, PSA/BGS/SGC/CGC 10. This is the anchor value. Paid subscription. |
-| Live comps | **eBay Browse API** (category 261328) | *Active* listings only. Used for the low/high range and the comps list. Free developer account. |
-| Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | One-tap links | eBay's sold-data API (Marketplace Insights) is restricted to approved partners, and 130point/Goldin have no public API — so they open pre-filled searches rather than being scraped. The **Market value override** field lets you type in a better comp you find there. |
-| Listing copy | **Claude** | Uses only the card's facts; built-in templates work with no key/offline. |
+| Market value by grade | **eBay Browse API** (category 261328) | *Active* listings, bucketed by grade from listing titles. Anchor = median of the bucket matching the card's grade, minus 12% ask-to-sold. Free developer account — no paid price guide. |
+| Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | One-tap links | No free API exposes eBay sold prices (eBay shut down the free Finding API in Feb 2025; Marketplace Insights is restricted to approved partners) — so they open pre-filled searches rather than being scraped. The **Market value override** field lets you type in a better comp you find there. |
+| Listing copy | **Gemini** (free; Anthropic only as fallback) | Uses only the card's facts; built-in templates work with no key/offline. |
 
 **Valuation logic** (`api/comps.js`): if the guide has a price for the card's exact grade, that's Market; Low/High blend ±15% with the trimmed active-ask range. With no guide match, Market = median active ask −12% (asks run above sold) and the app warns you to confirm sold comps. Outliers are removed with the IQR rule.
 
@@ -87,10 +86,10 @@ npm run dev                    # app + /api on http://localhost:5173
 2. Add environment variables from `.env.example`.
 3. Deploy. Share the URL or the QR code from **Settings → Share the app**.
 
-### Getting keys
-- **Anthropic**: console.anthropic.com → API Keys.
-- **SportsCardsPro**: sportscardspro.com subscription → API token.
-- **eBay**: developer.ebay.com → create an app → *Production* keyset → App ID (Client ID) + Cert ID (Client Secret).
+### Getting keys (all free)
+- **Gemini**: aistudio.google.com/apikey → API key. Powers card recognition + AI listing copy.
+- **eBay**: developer.ebay.com → create an app → *Production* keyset → App ID (Client ID) + Cert ID (Client Secret). Powers market comps.
+- **Anthropic** (optional): console.anthropic.com → API Keys. Only a backup for listing copy.
 
 Without any market-data key the app still works: identify → open the comp links → type the value in the override field.
 
