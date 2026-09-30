@@ -12,8 +12,8 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
  Phone / desktop browser (PWA)                    Vercel serverless (/api)             Upstream
  ┌───────────────────────────────┐   HTTPS JSON   ┌─────────────────────┐
  │ React 18 + Tailwind 4 (Vite)  │ ─────────────▶ │ /api/identify        │ ──▶ Gemini vision (free tier)
- │ Evaluator · Collection ·      │                │ /api/comps           │ ──▶ eBay Browse API (active listings,
- │ Export & Sell · Settings      │                │                      │     bucketed by grade)
+ │ Evaluator · Collection ·      │                │ /api/comps           │ ──▶ Gemini + Search grounding
+ │ Export & Sell · Settings      │                │                      │     (sold comps)
  │ IndexedDB  (cards + photos)   │                │ /api/listing         │ ──▶ Gemini (free; Anthropic fallback)
  │ Service worker (offline shell)│                └─────────────────────┘
  └───────────────────────────────┘
@@ -24,8 +24,8 @@ Runs in Safari (iOS), Chrome (Android) and desktop browsers, installs to the hom
 | Need | Source | Notes |
 |---|---|---|
 | Card recognition / OCR | **Gemini vision** (`gemini-3.8-flash`, free tier, override with `GEMINI_MODEL`) — falls back to **Claude vision** (`claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`) | Reads slab labels (grader, grade, cert #) and raw card design/back text. Returns a confidence score + notes; every field stays editable. |
-| Market value by grade | **eBay Browse API** (category 261328) | *Active* listings, bucketed by grade from listing titles. Anchor = median of the bucket matching the card's grade, minus 12% ask-to-sold. Free developer account — no paid price guide. |
-| Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | One-tap links | No free API exposes eBay sold prices (eBay shut down the free Finding API in Feb 2025; Marketplace Insights is restricted to approved partners) — so they open pre-filled searches rather than being scraped. The **Market value override** field lets you type in a better comp you find there. |
+| Market value | **Gemini + Google Search grounding** (free tier) | When a scan IDs a card, the app searches the web for recent *sold* prices (eBay sold, Heritage, Goldin, Fanatics Collect, 130point, PSA auction data) and approximates a value with linked sources. Labeled as an AI estimate — verify before paying up. |
+| Sold comps (eBay Sold, 130point, Goldin, Fanatics Collect/PWCC) | Shown under the estimate + one-tap links | Every comp the AI cites links to its source. The **Market value override** field lets you type in a better comp you find yourself. |
 | Listing copy | **Gemini** (free; Anthropic only as fallback) | Uses only the card's facts; built-in templates work with no key/offline. |
 
 **Valuation logic** (`api/comps.js`): if the guide has a price for the card's exact grade, that's Market; Low/High blend ±15% with the trimmed active-ask range. With no guide match, Market = median active ask −12% (asks run above sold) and the app warns you to confirm sold comps. Outliers are removed with the IQR rule.
@@ -86,12 +86,10 @@ npm run dev                    # app + /api on http://localhost:5173
 2. Add environment variables from `.env.example`.
 3. Deploy. Share the URL or the QR code from **Settings → Share the app**.
 
-### Getting keys (all free)
-- **Gemini**: aistudio.google.com/apikey → API key. Powers card recognition + AI listing copy.
-- **eBay**: developer.ebay.com → create an app → *Production* keyset → App ID (Client ID) + Cert ID (Client Secret). Powers market comps.
-- **Anthropic** (optional): console.anthropic.com → API Keys. Only a backup for listing copy.
+### Getting keys (just one — free)
+- **Gemini**: aistudio.google.com/apikey → API key. Powers card recognition, market values + AI listing copy.
 
-Without any market-data key the app still works: identify → open the comp links → type the value in the override field.
+Without a key the app still works: identify stays dormant, and you can type values in the override field.
 
 ---
 
