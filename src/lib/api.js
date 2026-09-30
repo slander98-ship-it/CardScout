@@ -6,6 +6,7 @@ import { loadSettings } from './settings.js';
 function keyHeaders() {
   const s = loadSettings();
   const h = { 'Content-Type': 'application/json' };
+  if (s.geminiKey) h['x-gemini-key'] = s.geminiKey;
   if (s.anthropicKey) h['x-anthropic-key'] = s.anthropicKey;
   if (s.sportsCardsProToken) h['x-scp-token'] = s.sportsCardsProToken;
   if (s.ebayClientId) h['x-ebay-client-id'] = s.ebayClientId;
