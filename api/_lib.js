@@ -48,8 +48,9 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
   });
   // Google's free tier buckles under load — ride out transient 5xx "high
   // demand" spikes with backoff. For 429 quota hits, honor Google's own
-  // "retry in Xs" hint exactly once, then stop: blind retries just burn the
-  // quota faster. The caller surfaces a friendly "wait a minute" message.
+  // "retry in Xs" hint and retry automatically (up to two waits) so the user
+  // never has to tap retry themselves. Only after the hints are exhausted
+  // does the caller surface a friendly "wait a minute" message.
   let lastErr = new Error('Gemini request failed');
   for (let attempt = 0; attempt < 3; attempt++) {
     const r = await fetch(url, {
@@ -78,7 +79,7 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
     if (attempt === 2) break;
     if (r.status === 429) {
       const m = /retry in ([\d.]+)\s*s/i.exec(lastErr.message);
-      if (attempt === 0 && m) {
+      if (m && attempt < 2) {
         await sleep(Math.min(parseFloat(m[1]) * 1000 + 1500, 20000));
         continue;
       }
