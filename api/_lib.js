@@ -78,13 +78,30 @@ export async function gemini(apiKey, { system, text, images, maxTokens = 800, gr
     lastErr = new Error(data?.error?.message || `Gemini API error ${r.status}`);
     if (attempt === 2) break;
     if (r.status === 429) {
-      const m = /retry in ([\d.]+)\s*s/i.exec(lastErr.message);
-      if (m && attempt < 2) {
-        await sleep(Math.min(parseFloat(m[1]) * 1000 + 1500, 20000));
+      // Google's real quota detail lives in error.details, not the message text.
+      // Per-minute vs per-day exhaustion need completely different advice, so read it properly.
+      const details = (data && data.error && data.error.details) || [];
+      let quotaId = '';
+      let retryMs = 0;
+      for (const det of details) {
+        if (det.violations && det.violations[0] && det.violations[0].quotaId) quotaId = det.violations[0].quotaId;
+        if (det.retryDelay) {
+          const mm = /([\d.]+)s/.exec(det.retryDelay);
+          if (mm) retryMs = parseFloat(mm[1]) * 1000;
+        }
+      }
+      if (/PerDay/i.test(quotaId)) {
+        lastErr = new Error(
+          "Google's free DAILY limit is used up for today (" + quotaId + "). It resets around midnight Pacific — try again tomorrow, or turn on pay-as-you-go billing on the Google Cloud project to lift the cap."
+        );
+        break;
+      }
+      if (retryMs > 0) {
+        await sleep(Math.min(retryMs + 1500, 25000));
         continue;
       }
-      lastErr = new Error("Google's free tier is rate-limited right now — it resets in under a minute. Give it a moment, then try again.");
-      break;
+      await sleep(10000);
+      continue;
     }
     // Retry anything else that smells transient: any 5xx, or Google's
     // "high demand / overloaded / try again later" messages regardless of status.
